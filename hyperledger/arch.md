@@ -220,3 +220,17 @@ SYNC_STATE_GET_DELTAS 和对应的 SYNC_STATE_DELTAS。
 
 #### Consensus
 CONSENSUS 消息。
+
+### 新的架构设计
+目前，VP 节点执行了所有的操作，包括接收交易，进行交易验证，进行一致性达成，进行账本维护等。这些功能的耦合导致节点性能很难进行扩展。
+
+新的思路就是对这些功能进行解耦，让每个功能都相对单一，容易进行扩展。社区内已经有了一些讨论。
+
+一种可能的设计是根据功能将节点角色解耦开。
+
+* submitting peer：负责检查客户端请求的签名，运行交易，根据状态改变构造 chaincode 交易并提交给 endorser；收集到足够多 endorser 支持后可以发请求给 consenter；
+* endorser peer：负责来自 submitting peer 的 chaincode 交易的合法性和权限检查（模拟交易），通过并返回支持（如签名）给 submitting peer；
+* consenter：负责一致性达成，给交易们一个全局的排序，不需要跟账本打交道，其实就是个逻辑集中的队列。
+* committing peer：负责维护账本，写入达成一致的交易结果等，某些时候不需要单独存在；
+
+![示例交易过程](../_images/transaction_flow)
